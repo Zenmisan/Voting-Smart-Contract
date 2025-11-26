@@ -1,0 +1,6 @@
+{
+  "require": ["@nomicfoundation/hardhat-ethers"],
+  "extension": ["ts"],
+  "spec": "test/**/*.test.ts",
+  "timeout": 40000
+}
