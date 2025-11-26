@@ -124,6 +124,7 @@ contract VotingContract {
     *@notice Get candidate with the highest number of votes
     *@return Candidate with most votes
      */
+     
     function getCandidateWithHighestVote() public view returns (Candidate memory)
     {
         require(candidateArray.length > 0, "No candidate registered");

@@ -3,9 +3,11 @@
 // File: test/VotingContract.test.ts
 // ============================================
 
+// import { expect } from "chai";
 import { expect } from "chai";
-import hardhat from "hardhat";
-const { ethers } = hardhat;
+import { ContractTransactionResponse } from "ethers";
+import hre from "hardhat";
+import  { parseEther  }  from "viem";
 
 describe("VotingContract", function () {
   let votingContract: any;
@@ -17,11 +19,12 @@ describe("VotingContract", function () {
 
   // Deploy fresh contract before each test
   beforeEach(async function () {
-    [owner, voter1, voter2, voter3, nonOwner] = await ethers.getSigners();
+  const [owner, voter1, voter2, voter3, nonOwner] = await hre.viem.getSigners();
     
     const VotingContract = await ethers.getContractFactory("VotingContract");
-    votingContract = await VotingContract.deploy() as VotingContract;
+    votingContract = await VotingContract.deploy();
     await votingContract.deployed();
+
   });
 
   describe("Deployment", function () {

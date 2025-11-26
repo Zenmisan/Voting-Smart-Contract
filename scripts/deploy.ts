@@ -1,4 +1,5 @@
-import ethers from "hardhat";
+import hre from "hardhat";
+import { formatEther, parseEther } from "viem";
 import * as fs from "fs";
 
 interface DeploymentInfo {
@@ -6,71 +7,69 @@ interface DeploymentInfo {
   contractAddress: string;
   deployer: string;
   deploymentTime: string;
-  blockNumber: number;
+  blockNumber: bigint;
 }
 
 async function main(): Promise<void> {
   console.log("🚀 Starting deployment...\n");
 
-  // Get the deployer account
-  const [deployer] = await ethers.getSigners();
-  console.log("📝 Deploying contracts with account:", deployer.address);
-  console.log("💰 Account balance:", (await deployer.getBalance()).toString());
+  // Get deployer account
+  const [deployer] = await hre.viem.getWalletClients();
+  const publicClient = await hre.viem.getPublicClient();
+
+  console.log("📝 Deploying contracts with account:", deployer.account.address);
+  
+  // Get balance
+  const balance = await publicClient.getBalance({ 
+    address: deployer.account.address 
+  });
+  console.log("💰 Account balance:", formatEther(balance), "ETH");
   console.log("");
 
   // Deploy the VotingContract
-  const VotingContract = await ethers.getContractFactory("VotingContract");
   console.log("⏳ Deploying VotingContract...");
   
-  const votingContract = await VotingContract.deploy();
-  await votingContract.deployed();
+  const votingContract = await hre.viem.deployContract("VotingContract");
 
   console.log("✅ VotingContract deployed to:", votingContract.address);
-  console.log("👤 Owner:", await votingContract.owner());
+  
+  // Get owner
+  const owner = await votingContract.read.owner();
+  console.log("👤 Owner:", owner);
   console.log("");
 
-  // Wait for a few block confirmations
+  // Wait for confirmations
   console.log("⏳ Waiting for block confirmations...");
-  await votingContract.deployTransaction.wait(5);
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: votingContract.deploymentTransaction().hash,
+    confirmations: 5
+  });
   console.log("✅ Contract confirmed!\n");
-
-  // Optional: Verify on Etherscan (if deploying to testnet/mainnet)
-  const network = await ethers.provider.getNetwork();
-  if (network.name !== "hardhat" && network.name !== "localhost") {
-    console.log("🔍 Verifying contract on Etherscan...");
-    try {
-      const hre = require("hardhat");
-      await hre.run("verify:verify", {
-        address: votingContract.address,
-        constructorArguments: [],
-      });
-      console.log("✅ Contract verified!");
-    } catch (error: any) {
-      console.log("❌ Verification failed:", error.message);
-    }
-  }
 
   // Save deployment info
   const deploymentInfo: DeploymentInfo = {
-    network: network.name,
+    network: hre.network.name,
     contractAddress: votingContract.address,
-    deployer: deployer.address,
+    deployer: deployer.account.address,
     deploymentTime: new Date().toISOString(),
-    blockNumber: votingContract.deployTransaction.blockNumber || 0,
+    blockNumber: receipt.blockNumber,
   };
 
-  console.log("\n📊 Deployment Summary:");
-  console.log(JSON.stringify(deploymentInfo, null, 2));
+  console.log("📊 Deployment Summary:");
+  console.log(JSON.stringify(deploymentInfo, (key, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  , 2));
 
   // Save to file
   fs.writeFileSync(
     "deployment-info.json",
-    JSON.stringify(deploymentInfo, null, 2)
+    JSON.stringify(deploymentInfo, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    , 2)
   );
   console.log("\n💾 Deployment info saved to deployment-info.json");
 }
 
-// Execute deployment
 main()
   .then(() => process.exit(0))
   .catch((error: Error) => {

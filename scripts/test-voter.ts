@@ -14,6 +14,8 @@ const main = async () => {
     const votingContract = await viem.deployContract("VotingContract");
     const result = await votingContract.write.registerCandidate(["zenmi"]);
     console.log()
+
+    const transactionResul = publicClient.getTransactionReceipt({ hash: result });
 }
 
 
